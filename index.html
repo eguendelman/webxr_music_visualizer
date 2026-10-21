@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101714">
+  <title>Pulse / WebXR music visualizer</title>
+  <link rel="stylesheet" href="static/styles.css">
+  <script src="static/app.js" defer></script>
+</head>
+<body>
+  <canvas id="scene" aria-label="A spatial grid of hanging LED strips"></canvas>
+  <main>
+    <header><span class="wordmark">PULSE</span><span class="tag">WEBXR / LED VOLUME 003</span></header>
+    <div class="workspace">
+      <section class="intro">
+        <p class="eyebrow">A FIELD OF LIGHT, SHAPED BY SOUND</p>
+        <h1>Step inside<br>your sound.</h1>
+        <p class="description">A regular grid of LED strips hangs from the ceiling to the floor. Choose a track, start playback, then enter VR.</p>
+        <div class="audio-input">
+          <label for="audio-file">Choose an audio file</label>
+          <input id="audio-file" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac">
+          <p id="track-name">No track selected. LEDs are idle.</p>
+          <button id="play-audio" disabled>Play track</button>
+          <audio id="audio-player" controls preload="metadata" hidden aria-label="Track playback"></audio>
+          <p id="audio-message" role="status" aria-live="polite">Files stay on this device. Start playback before entering VR.</p>
+        </div>
+        <button id="enter-vr" disabled>Checking VR support...</button>
+        <p id="message" role="status" aria-live="polite">Preparing the scene.</p>
+      </section>
+      <aside class="controls" aria-labelledby="grid-controls-title">
+        <div class="controls-heading">
+          <div>
+            <p class="eyebrow">DESKTOP CONTROLS</p>
+            <h2 id="grid-controls-title">LED volume</h2>
+          </div>
+          <output id="grid-count" aria-live="polite">Building grid...</output>
+        </div>
+        <p class="coordinate-note"><b>Origin:</b> viewer at X=0, Z=0. Y=0 is the floor; +Y points toward the ceiling. Floor-grid intersections are the possible strip locations.</p>
+        <div class="preview-controls">
+          <span>Left-drag: orbit. Wheel: zoom. Shift-drag or right-drag: pan.</span>
+          <button id="reset-camera" type="button">Reset view</button>
+        </div>
+        <div class="parameter-grid">
+          <h3>Light response</h3>
+          <label for="color-scheme">Color scheme</label>
+          <select id="color-scheme">
+            <option value="aurora">Magenta / cyan</option>
+            <option value="rainbow">Full rainbow</option>
+          </select>
+          <label for="noise-floor">Noise gate <output for="noise-floor" id="noise-floor-value"></output></label>
+          <input id="noise-floor" type="range" min="0" max="0.5" step="0.01" value="0.12">
+          <label for="response-gain">Signal gain <output for="response-gain" id="response-gain-value"></output></label>
+          <input id="response-gain" type="range" min="0.25" max="6" step="0.05" value="2">
+          <label for="response-curve">Contrast curve <output for="response-curve" id="response-curve-value"></output></label>
+          <input id="response-curve" type="range" min="0.5" max="3" step="0.05" value="1.6">
+          <label for="onset-boost">Onset boost <output for="onset-boost" id="onset-boost-value"></output></label>
+          <input id="onset-boost" type="range" min="0" max="5" step="0.1" value="1.8">
+          <label for="idle-brightness">Idle brightness <output for="idle-brightness" id="idle-brightness-value"></output></label>
+          <input id="idle-brightness" type="range" min="0" max="0.15" step="0.005" value="0">
+          <label for="peak-brightness">Peak brightness <output for="peak-brightness" id="peak-brightness-value"></output></label>
+          <input id="peak-brightness" type="range" min="0.25" max="2.5" step="0.05" value="1.25">
+          <label class="toggle-control" for="demo-signal">
+            <input id="demo-signal" type="checkbox">
+            <span>Animate when no track is loaded</span>
+          </label>
+          <label class="toggle-control" for="debug-all-white">
+            <input id="debug-all-white" type="checkbox">
+            <span>Debug: all LEDs full white</span>
+          </label>
+
+          <h3>Time</h3>
+          <label for="radial-speed">Radial speed <output for="radial-speed" id="radial-speed-value"></output></label>
+          <input id="radial-speed" type="range" min="0.25" max="4" step="0.05" value="4">
+          <label for="history-fade">History fade <output for="history-fade" id="history-fade-value"></output></label>
+          <input id="history-fade" type="range" min="1" max="20" step="0.5" value="8">
+
+          <h3>Geometry</h3>
+          <label for="strip-spacing">Strip spacing X/Z <output for="strip-spacing" id="strip-spacing-value"></output></label>
+          <input id="strip-spacing" data-grid-param type="range" min="0.10" max="1.2" step="0.05" value="0.5">
+          <label for="led-spacing">LED spacing <output for="led-spacing" id="led-spacing-value"></output></label>
+          <input id="led-spacing" data-grid-param type="range" min="0.1" max="0.4" step="0.02" value="0.16">
+          <label for="ceiling-height">Ceiling height <output for="ceiling-height" id="ceiling-height-value"></output></label>
+          <input id="ceiling-height" data-grid-param type="range" min="2" max="4" step="0.1" value="2.6">
+          <label for="x-extent">X half-extent <output for="x-extent" id="x-extent-value"></output></label>
+          <input id="x-extent" data-grid-param type="range" min="2" max="6" step="0.25" value="4">
+          <label for="z-extent">Z half-extent <output for="z-extent" id="z-extent-value"></output></label>
+          <input id="z-extent" data-grid-param type="range" min="2" max="6" step="0.25" value="4">
+          <label for="clearance-radius">Viewer clearance <output for="clearance-radius" id="clearance-radius-value"></output></label>
+          <input id="clearance-radius" data-grid-param type="range" min="0.5" max="2.5" step="0.1" value="1.25">
+          <label for="led-size">LED glow size <output for="led-size" id="led-size-value"></output></label>
+          <input id="led-size" type="range" min="10" max="50" step="1" value="30">
+        </div>
+      </aside>
+    </div>
+    <section class="diagnostics" aria-label="Connection diagnostics">
+      <div><span>CONNECTION</span><strong id="secure-status">Checking...</strong></div>
+      <div><span>WEBXR</span><strong id="xr-status">Checking...</strong></div>
+      <div><span>RENDERER</span><strong id="gl-status">Checking...</strong></div>
+      <div><span>AUDIO</span><strong id="audio-status">No track / idle</strong></div>
+    </section>
+    <footer><span>Local audio only. In VR, controller trigger toggles playback.</span><span id="origin"></span></footer>
+  </main>
+</body>
+</html>
