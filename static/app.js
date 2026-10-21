@@ -8,6 +8,7 @@ const xrStatus = document.querySelector('#xr-status');
 const glStatus = document.querySelector('#gl-status');
 const gridCount = document.querySelector('#grid-count');
 const ledSizeInput = document.querySelector('#led-size');
+const ledPerturbationInput = document.querySelector('#led-perturbation');
 const radialSpeedInput = document.querySelector('#radial-speed');
 const radialSpeedDisplay = document.querySelector('#radial-speed-value');
 const historyFadeInput = document.querySelector('#history-fade');
@@ -42,6 +43,7 @@ const controlDisplays = {
   clearanceRadius: document.querySelector('#clearance-radius-value'),
 };
 const ledSizeDisplay = document.querySelector('#led-size-value');
+const ledPerturbationDisplay = document.querySelector('#led-perturbation-value');
 const responseDisplays = {
   noiseFloor: document.querySelector('#noise-floor-value'),
   responseGain: document.querySelector('#response-gain-value'),
@@ -60,7 +62,9 @@ let ledPositionBuffer;
 let ledColorBuffer;
 let strandBuffer;
 let floorGridBuffer;
-let ledPositions = new Float32Array();
+let ledBasePositions = new Float32Array();
+let ledRenderPositions = new Float32Array();
+let ledPerturbations = new Float32Array();
 let ledColors = new Float32Array();
 let strandCount = 0;
 let floorGridVertexCount = 0;
@@ -345,6 +349,7 @@ function refreshControlLabels() {
     display.textContent = `${Number(controls[name].value).toFixed(controls[name].step < 0.1 ? 2 : 1)} m`;
   }
   ledSizeDisplay.textContent = `${ledSizeInput.value} px`;
+  ledPerturbationDisplay.textContent = `${Number(ledPerturbationInput.value).toFixed(4)} m`;
   radialSpeedDisplay.textContent = `${Number(radialSpeedInput.value).toFixed(2)} m/s`;
   historyFadeDisplay.textContent = `${Number(historyFadeInput.value).toFixed(1)} s`;
   responseDisplays.noiseFloor.textContent = Number(noiseFloorInput.value).toFixed(2);
@@ -353,6 +358,39 @@ function refreshControlLabels() {
   responseDisplays.onsetBoost.textContent = `${Number(onsetBoostInput.value).toFixed(1)}x`;
   responseDisplays.idleBrightness.textContent = Number(idleBrightnessInput.value).toFixed(3);
   responseDisplays.peakBrightness.textContent = Number(peakBrightnessInput.value).toFixed(2);
+}
+
+let spareNormalRandom = null;
+
+function normalRandom() {
+  if (spareNormalRandom !== null) {
+    const value = spareNormalRandom;
+    spareNormalRandom = null;
+    return value;
+  }
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const magnitude = Math.sqrt(-2 * Math.log(u));
+  const angle = 2 * Math.PI * v;
+  spareNormalRandom = magnitude * Math.sin(angle);
+  return magnitude * Math.cos(angle);
+}
+
+function updatePerturbedLedPositions() {
+  if (!gl || !currentGrid || ledBasePositions.length === 0) return;
+  const deviation = Number(ledPerturbationInput.value);
+  for (let i = 0; i < ledBasePositions.length; i += 3) {
+    ledRenderPositions[i] = ledBasePositions[i] + ledPerturbations[i] * deviation;
+    ledRenderPositions[i + 1] = Math.max(0, Math.min(
+      currentGrid.ceilingHeight,
+      ledBasePositions[i + 1] + ledPerturbations[i + 1] * deviation,
+    ));
+    ledRenderPositions[i + 2] = ledBasePositions[i + 2] + ledPerturbations[i + 2] * deviation;
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, ledPositionBuffer);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, ledRenderPositions);
 }
 
 function rebuildGrid() {
@@ -389,14 +427,20 @@ function rebuildGrid() {
       }
     }
   }
-  ledPositions = new Float32Array(positions);
+  ledBasePositions = new Float32Array(positions);
+  ledRenderPositions = new Float32Array(positions.length);
+  ledPerturbations = new Float32Array(positions.length);
+  for (let i = 0; i < ledPerturbations.length; i++) {
+    ledPerturbations[i] = Math.max(-3, Math.min(3, normalRandom()));
+  }
   ledColors = new Float32Array(positions.length);
   ledColorsAreDebugWhite = false;
   pointCount = positions.length / 3;
   strandCount = strips;
   currentGrid = parameters;
   gl.bindBuffer(gl.ARRAY_BUFFER, ledPositionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, ledPositions, gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, ledRenderPositions.byteLength, gl.DYNAMIC_DRAW);
+  updatePerturbedLedPositions();
   gl.bindBuffer(gl.ARRAY_BUFFER, ledColorBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, ledColors.byteLength, gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, strandBuffer);
@@ -425,6 +469,7 @@ for (const input of document.querySelectorAll('[data-grid-param]')) {
 }
 for (const input of [
   ledSizeInput,
+  ledPerturbationInput,
   radialSpeedInput,
   historyFadeInput,
   noiseFloorInput,
@@ -436,6 +481,7 @@ for (const input of [
 ]) {
   input.addEventListener('input', refreshControlLabels);
 }
+ledPerturbationInput.addEventListener('input', updatePerturbedLedPositions);
 demoSignalInput.addEventListener('change', updatePlaybackUI);
 refreshControlLabels();
 
@@ -574,9 +620,9 @@ function updateLedColors(seconds) {
   const peakBrightness = Number(peakBrightnessInput.value);
   for (let i = 0; i < pointCount; i++) {
     const offset = i * 3;
-    const x = ledPositions[offset];
-    const y = ledPositions[offset + 1];
-    const z = ledPositions[offset + 2];
+    const x = ledBasePositions[offset];
+    const y = ledBasePositions[offset + 1];
+    const z = ledBasePositions[offset + 2];
     const radius = Math.hypot(x, z);
     const yRatio = y / ceiling;
     const band = Math.min(31, Math.floor(yRatio * 32));

@@ -51,7 +51,7 @@
           <label for="noise-floor">Noise gate <output for="noise-floor" id="noise-floor-value"></output></label>
           <input id="noise-floor" type="range" min="0" max="0.5" step="0.01" value="0.12">
           <label for="response-gain">Signal gain <output for="response-gain" id="response-gain-value"></output></label>
-          <input id="response-gain" type="range" min="0.25" max="6" step="0.05" value="2">
+          <input id="response-gain" type="range" min="0.25" max="6" step="0.05" value="1">
           <label for="response-curve">Contrast curve <output for="response-curve" id="response-curve-value"></output></label>
           <input id="response-curve" type="range" min="0.5" max="3" step="0.05" value="1.6">
           <label for="onset-boost">Onset boost <output for="onset-boost" id="onset-boost-value"></output></label>
@@ -77,9 +77,11 @@
 
           <h3>Geometry</h3>
           <label for="strip-spacing">Strip spacing X/Z <output for="strip-spacing" id="strip-spacing-value"></output></label>
-          <input id="strip-spacing" data-grid-param type="range" min="0.10" max="1.2" step="0.05" value="0.5">
+          <input id="strip-spacing" data-grid-param type="range" min="0.10" max="1.2" step="0.05" value="0.2">
           <label for="led-spacing">LED spacing <output for="led-spacing" id="led-spacing-value"></output></label>
           <input id="led-spacing" data-grid-param type="range" min="0.1" max="0.4" step="0.02" value="0.16">
+          <label for="led-perturbation">LED jitter std dev <output for="led-perturbation" id="led-perturbation-value"></output></label>
+          <input id="led-perturbation" type="range" min="0" max="0.025" step="0.0005" value="0.005">
           <label for="ceiling-height">Ceiling height <output for="ceiling-height" id="ceiling-height-value"></output></label>
           <input id="ceiling-height" data-grid-param type="range" min="2" max="4" step="0.1" value="2.6">
           <label for="x-extent">X half-extent <output for="x-extent" id="x-extent-value"></output></label>
